@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>
+    <?php
+    //use default page title if one won't provived..
+    if(isset($page_title)){
+      echo $page_title;
+    }
+    else{
+      echo 'Build your body';
+    }
+    ?>
+  </title>
+  <!-- adding bootstrap CSS CDN -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" crossorigin="anonymous">
+  <!-- adding fontawesome CDN -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <!-- custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet" type="text/css">
+  <link href="css/other.css" rel="stylesheet" type="text/css">
+  <!-- adding icon to this templete -->
+  <link rel="shortcut icon" type="image/png/ico" href="images/logo.ico">
+
+
+</head>
+<body>
+  <!-- nav bar to this template -->
+  <div class="navbar fixed-top bg-dark" id="navbar">
+  <div class="container">
+    <div class="navbar-header">
+      <p  id="menu">
+        <i class="fa fa-bars" aria-hidden="true"></i>&nbsp;&nbsp;Menu
+    </p>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="index.php"><img src="images/logo.png" id="logo" title="Home" width="120" height="40" alt="Logo here"></a></li>
+
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="contact.php" title="Contact us">Cotact us</a></li>
+    </ul>
+  </div>
+</div>
+<!-- ending nav bar -->
+
+  <!--Creating model for menu button Modal content -->
+  <div class="modal" id="modal">
+    <div class="modal-content" id="modal-content">
+      <span class="close">&times;Close</span>
+      <ul class="list-unstyled" id="menu-links">
+        <li><a href="getmembership.php">Gym offers</a></li>
+        <li><a href="equipment.php">Equipment</a></li>
+        <li><a href="diet.php">Diet</a></li>
+        <li><a href="ourresult.php">Our result</a></li>
+        <li><a href="training.php">Our Traning</a></li>
+        <li><a href="aboutus.php">About us</a></li>
+      </ul>
+    </div>
+  </div>
+  <!-- //Creating model for menu button Modal content  -->
+</body>
+<!-- adding bootstrap JS CDN -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"  crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"  crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"  crossorigin="anonymous"></script>
+<script type="text/javascript" src="js/js.js"></script>
+
+</html>
