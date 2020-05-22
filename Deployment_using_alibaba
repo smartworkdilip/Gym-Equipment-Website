@@ -1,1 +1,130 @@
+Installing Fun
+We said this tutorial will be based on "Fun." Fun is an official Alibaba Cloud tool to arrange serverless applications resources. 
+Therefore, we will use it to deploy our website backend by describing the resources in a template.yml file.To install Fun, you 
+only need to run in your terminal npm install @alicloud/fun -g. To verify that the installation went ok, type fun -h   and see 
+if the output prints the Fun help.
+Providing AcessKey
+Once in the Security Management screen, copy the Access Key ID and the Access Key Secret into the .env file we created before:
 
+ACCESS_KEY_SECRET=Replace This with your Access Key Secret
+ACCESS_KEY_ID=Replace This with your Access Key
+ACCOUNT_ID=Replace This with your Account ID
+REGION=ap-southeast-2
+
+Create the Template
+As we mentioned before, the way Fun works is by reading a YAML file where all the resources are described, all that apart of the 
+specific permissions for the Function Compute Service if needed.The template.yml below describes the Function Compute Service 
+AboutMePage, the Table Store Instance AboutMePageOTS and the API Group AboutMeAPI. Add the following under your project folder:
+
+Implementation-
+
+Transform: 'Aliyun::Serverless-2020-05-03'
+Resources:
+  AboutMePage:
+    Type: 'Aliyun::Serverless::Service'
+    Properties:
+      Description: 'Function Compute Service for the About Page'
+      Policies:
+      - AliyunOTSFullAccess
+    visits:
+      Type: 'Aliyun::Serverless::Function'
+      Properties:
+        Handler: visits.handler
+        Runtime: nodejs8
+        CodeUri: './'
+        Timeout: 10
+        EnvironmentVariables:
+          InstanceName: AboutMePageOTS
+          TableName: visitsTable
+  AboutMePageOTS:
+    Type: 'Aliyun::Serverless::TableStore'
+    Properties:
+      ClusterType: HYBRID
+      Description: 'Table used to store visits'
+    visitsTable:
+      Type: 'Aliyun::Serverless::TableStore::Table'
+      Properties:
+        PrimaryKeyList:
+        - Name: count_name
+          Type: STRING
+  AboutMeAPI:
+    Type: 'Aliyun::Serverless::Api'
+    Properties:
+      StageName: RELEASE
+      DefinitionBody:
+        '/visits':
+          get:
+            x-aliyun-apigateway-api-name: visits_get
+            x-aliyun-apigateway-fc:
+              arn: acs:fc:::services/${AboutMePage.Arn}/functions/${visits.Arn}/
+
+
+
+Create the Function
+This is the heart of our project, as it will be the piece of the code that will register the visits and retrieve the latest number.
+The code is using nodejs8 as the runtime and supports the creation of the first value in the table if it doesn't exist. So, for now
+, write the following code.
+
+const TableStore = require('tablestore')
+const Long = TableStore.Long
+async function getViewsCount(client) {
+    const response = await client.getRow({
+        tableName: process.env['TableName'],
+        primaryKey: [{ count_name: 'views' }],
+        maxVersions: 1,
+    })
+    return response.row && response.row.primaryKey
+        ? response.row.attributes[0].columnValue.toNumber()
+        : null
+}
+exports.handler = function (event, context, callback) {
+    (async () => {
+        let success = false
+        let views = null
+        const client = new TableStore.Client({
+            accessKeyId: context.credentials.accessKeyId,
+            secretAccessKey: context.credentials.accessKeySecret,
+            stsToken: context.credentials.securityToken,
+            endpoint: `http://${process.env['InstanceName']}.${context.region}.ots.aliyuncs.com`,
+            instancename: process.env['InstanceName'],
+        })
+        do {
+            views = await getViewsCount(client) || 0
+            const tableName = process.env['TableName']
+            const updateOfAttributeColumns = [{ PUT: [{ count: Long.fromNumber(views + 1) }] }]
+            const primaryKey = [{ count_name: 'views' }]
+            const condition = views
+                ? new TableStore.Condition(TableStore.RowExistenceExpectation.IGNORE, new TableStore.SingleColumnCondition('count', Long.fromNumber(views), TableStore.ComparatorType.EQUAL))
+                : new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_NOT_EXIST, null)
+            try {
+                await client.updateRow({
+                    tableName,
+                    condition,
+                    primaryKey,
+                    updateOfAttributeColumns,
+                })
+                success = true
+            } catch (ex) {
+                console.log(ex)
+            }
+        } while (!success)
+        callback(null, { isBase64Encoded: false, statusCode: 200, body: views })
+    })()
+}
+
+Deploy
+This step is very straightforward, as Fun includes a command to automatically deploy all the resources defined in the template.
+For this, we will run fun deploy and wait for the process to finish. It prints a very neat output to inform all what is really 
+happening. From the output we will really need one thing, the API gateway identifier. Somewhere in the last lines, find something
+like URL: GET http://722919aa644345e39ac1e872cc387e25-ap-southeast-2.alicloudapi.com/time, well, copy that URL for later, as we 
+don't need it right now.
+
+Create a Public Bucket
+Traditionally, you'll serve the files using a web server installed in an ECS Instance, and said server would interact with the 
+visitor by preparing the page contents and sending it back. In this serverless approach, the files will be served from an OSS bucket.
+To create a bucket, go to the OSS Console and, from the right panel, click on "Create Bucket." Give a meaningful name to it and 
+select "Public Read" under Access Control List. As a result, this will expose the contents of the bucket to anyone on the Internet.
+Confirm the creation clicking on "Ok." To serve static sites using the bucket, there is still something else we need to touch. 
+For this, open the just-created bucket and go to the "Basic Settings" tab. Once in, click in the "Configure" button under "Static Pages"
+and type "index.html" next to "Default Homepage." That will tell OSS which file to serve by default. Just like using a web server 
+like Apache or NGINX.
